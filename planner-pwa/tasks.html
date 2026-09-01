@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0f24">
+<title>Planner — Tasks</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script>
+  try { if (localStorage.getItem('planner_theme') === 'light') document.documentElement.setAttribute('data-theme', 'light'); } catch (e) {}
+</script>
+<link rel="stylesheet" href="styles.css">
+<style>
+  #tasksPage{ display:flex; flex-direction:column; height:100%; overflow:hidden; }
+  .tasks-body{ flex:1; overflow-y:auto; padding:4px 16px calc(90px + env(safe-area-inset-bottom)) 16px; position:relative; }
+
+  .list-row{ display:flex; align-items:center; gap:8px; margin-top:10px; }
+  .list-row select{ flex:1; background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:10px 12px; font-family:inherit; font-size:13px; }
+  .list-add-btn{ width:38px; height:38px; border-radius:10px; background:var(--panel-2); border:1px solid var(--line); color:var(--text); font-size:18px; flex-shrink:0; }
+
+  .new-list-row{ display:none; gap:8px; margin-top:8px; }
+  .new-list-row.open{ display:flex; }
+  .new-list-row input{ flex:1; }
+  .new-list-row button{ flex-shrink:0; padding:0 14px; border-radius:10px; border:none; background:var(--accent); color:var(--accent-ink); font-family:inherit; font-size:12px; font-weight:700; }
+
+  .tasks-toolbar{ display:flex; align-items:center; justify-content:space-between; margin-top:16px; gap:10px; }
+  .toggle-label{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--sub); }
+  .toggle-label input[type=checkbox]{ accent-color:var(--accent); width:14px; height:14px; }
+  .link-btn{ background:none; border:none; color:var(--sub); font-family:inherit; font-size:11px; text-decoration:underline; cursor:pointer; padding:4px; flex-shrink:0; }
+
+  .gtask-list{ display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+  .gtask-row{ display:flex; align-items:flex-start; gap:12px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:13px 14px; cursor:pointer; transition:transform 0.15s cubic-bezier(0.22,1,0.36,1), background 0.15s ease; }
+  .gtask-row:active{ transform:scale(0.98); background:var(--panel-2); }
+  .gtask-row.done{ opacity:0.55; }
+  .gtask-row.done .gtask-title{ text-decoration:line-through; }
+  .gtask-check{ width:20px; height:20px; border-radius:50%; border:1.5px solid var(--line); background:none; flex-shrink:0; margin-top:1px; position:relative; padding:0; }
+  .gtask-row.done .gtask-check{ background:var(--accent); border-color:var(--accent); }
+  .gtask-row.done .gtask-check::after{ content:'\2713'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--accent-ink); }
+  .gtask-body{ flex:1; min-width:0; }
+  .gtask-title{ font-size:13.5px; font-weight:600; color:var(--text); line-height:1.3; overflow-wrap:anywhere; }
+  .gtask-notes{ font-size:11px; color:var(--sub); margin-top:3px; line-height:1.4; overflow-wrap:anywhere; }
+  .gtask-due{ font-size:10px; color:var(--accent); background:rgba(242,184,75,0.12); border-radius:6px; padding:3px 7px; flex-shrink:0; white-space:nowrap; margin-top:1px; }
+
+  .fab{ position:absolute; right:16px; bottom:calc(20px + env(safe-area-inset-bottom)); width:52px; height:52px; border-radius:50%; background:var(--accent); color:var(--accent-ink); border:none; font-size:24px; box-shadow:0 10px 26px rgba(0,0,0,0.4); z-index:5; }
+  .tasks-error{ color:var(--error); font-size:12px; margin-top:14px; background:rgba(239,124,142,0.1); border:1px solid var(--error); border-radius:10px; padding:10px 12px; display:none; }
+  .tasks-error.show{ display:block; }
+  .tasks-loading{ text-align:center; color:var(--sub); font-size:12px; padding:30px 0; }
+</style>
+</head>
+<body>
+<div id="shell">
+
+<div id="gateMount"></div>
+
+<div id="tasksPage" style="display:none;" class="page-fade-in">
+  <div class="page-header">
+    <a class="icon-btn" href="index.html" aria-label="Back">&larr;</a>
+    <h1>Google Tasks</h1>
+    <button class="sync-chip" id="syncChip" aria-label="Sync now">
+      <span class="sync-pip" id="syncDot"></span><span id="syncText">Synced</span><span class="sync-icon">&#8635;</span>
+    </button>
+    <button class="icon-btn" id="menuBtn" aria-label="Menu">&#9776;</button>
+  </div>
+
+  <div class="tasks-body">
+    <div class="tasks-error" id="tasksError"></div>
+
+    <div class="list-row">
+      <select id="taskListSelect"></select>
+      <button class="list-add-btn" id="newListBtn" aria-label="New list" type="button">+</button>
+    </div>
+    <div class="new-list-row" id="newListRow">
+      <input type="text" id="newListName" placeholder="New list name" maxlength="60">
+      <button id="newListCreateBtn" type="button">Create</button>
+    </div>
+
+    <div class="tasks-toolbar">
+      <label class="toggle-label"><input type="checkbox" id="showCompletedToggle"> Show completed</label>
+      <button class="link-btn" id="clearCompletedBtn" type="button">Clear completed</button>
+    </div>
+
+    <div id="tasksLoading" class="tasks-loading" style="display:none;">Loading your tasks&hellip;</div>
+    <div id="tasksGrantPanel" style="display:none; text-align:center; padding:40px 10px;">
+      <p style="color:var(--sub); font-size:12px; margin:0 0 14px 0; line-height:1.5;">Google Tasks needs one extra permission — grant it once to manage your tasks here.</p>
+      <button class="btn btn-save" id="grantTasksBtn" type="button" style="flex:none; padding:12px 22px;">Grant access</button>
+    </div>
+    <div class="gtask-list" id="taskItems"></div>
+  </div>
+
+  <button class="fab" id="addTaskBtn" aria-label="Add task" type="button">+</button>
+</div>
+
+<!-- Task editor sheet -->
+<div class="sheet-backdrop" id="gtaskBackdrop"></div>
+<div class="sheet" id="gtaskSheet">
+  <div class="sheet-handle"></div>
+  <button class="sheet-close" id="gtaskCloseBtn" aria-label="Close without saving">&times;</button>
+  <label style="margin-top:4px;">Title</label>
+  <input type="text" id="gtaskTitle" placeholder="What needs doing?" maxlength="1000">
+  <label>Due date <span style="text-transform:none; opacity:0.6;">(optional)</span></label>
+  <input type="date" id="gtaskDue">
+  <label>Notes</label>
+  <textarea id="gtaskNotes" placeholder="Optional"></textarea>
+  <div class="sheet-error" id="gtaskError"></div>
+  <div class="sheet-actions">
+    <button class="btn btn-delete" id="gtaskDeleteBtn" style="display:none;">Delete</button>
+    <button class="btn btn-save" id="gtaskSaveBtn">Save</button>
+  </div>
+</div>
+
+<div id="drawerMount"></div>
+
+</div><!-- /#shell -->
+
+<script src="config.js"></script>
+<script src="auth.js"></script>
+<script src="sheetsApi.js"></script>
+<script src="gtasksApi.js"></script>
+<script src="core.js"></script>
+<script src="tasks.js"></script>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0f24">
+<title>Planner</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script>
+  try { if (localStorage.getItem('planner_theme') === 'light') document.documentElement.setAttribute('data-theme', 'light'); } catch (e) {}
+</script>
+<link rel="stylesheet" href="styles.css">
+<style>
+  #app{ display:flex; flex-direction:column; height:100%; position:relative; }
+
+  /* ---------- Night hero (index-only signature header) ---------- */
+  .hero{ position:relative; flex-shrink:0; overflow:hidden; background:linear-gradient(180deg,#0c1240 0%,#0a0f24 100%); padding-bottom:14px; --text:#eef1fb; --sub:#8d97c2; color:var(--text); }
+  .hero .stars{ position:absolute; inset:0; background-image:
+      radial-gradient(1px 1px at 20% 25%, #cfd6ff 100%, transparent),
+      radial-gradient(1px 1px at 65% 15%, #cfd6ff 100%, transparent),
+      radial-gradient(1px 1px at 80% 40%, #cfd6ff 100%, transparent),
+      radial-gradient(1px 1px at 40% 10%, #cfd6ff 100%, transparent),
+      radial-gradient(1.5px 1.5px at 90% 20%, #e9ecff 100%, transparent),
+      radial-gradient(1px 1px at 10% 45%, #cfd6ff 100%, transparent),
+      radial-gradient(1.5px 1.5px at 55% 30%, #e9ecff 100%, transparent),
+      radial-gradient(1px 1px at 30% 55%, #cfd6ff 100%, transparent);
+    opacity:0.8; }
+  .hero svg{ position:absolute; bottom:0; left:0; width:100%; height:auto; display:block; }
+  .hero .window{ position:absolute; width:5px; height:5px; border-radius:1px; background:var(--accent); box-shadow:0 0 8px 2px rgba(242,184,75,0.8); }
+  .hero-fade{ position:absolute; left:0; right:0; bottom:0; height:56px; background:linear-gradient(180deg, rgba(10,15,36,0) 0%, var(--ink) 92%); }
+  .hero-content{ position:relative; z-index:2; padding:calc(14px + env(safe-area-inset-top)) 16px 0 16px; display:flex; flex-direction:column; gap:10px; }
+  .title-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .title-row h1{ font-family:Georgia,serif; font-weight:400; font-style:italic; font-size:22px; margin:0; }
+
+  .quick-row{ display:flex; gap:8px; }
+  .quick-tile{ flex:1; display:flex; align-items:center; justify-content:center; gap:6px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); border-radius:10px; padding:9px 4px; font-size:12px; font-weight:600; color:var(--text); transition:transform 0.15s cubic-bezier(0.22,1,0.36,1), background 0.15s ease; }
+  .quick-tile:active{ transform:scale(0.96); background:rgba(255,255,255,0.14); }
+  .quick-tile .qt-icon{ font-size:14px; }
+
+  .nav-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .nav-row button{ background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:var(--text); width:32px; height:32px; border-radius:8px; font-size:15px; flex-shrink:0; }
+  .nav-row .mlabel{ font-size:16px; font-weight:600; flex:1; text-align:center; }
+  .date-banner{ display:flex; align-items:baseline; gap:8px; justify-content:center; flex:1; }
+  .date-banner .big-num{ font-size:22px; font-weight:700; line-height:1; }
+  .date-banner .dcol{ display:flex; flex-direction:column; line-height:1.2; text-align:left; }
+  .date-banner .dow{ font-family:Georgia,serif; font-style:italic; font-size:13px; color:var(--text); }
+  .date-banner .ym{ font-size:9px; color:var(--sub); text-transform:uppercase; letter-spacing:0.5px; }
+
+  /* ---------- Month view ---------- */
+  #monthView{ padding:8px 16px calc(24px + env(safe-area-inset-bottom)) 16px; overflow-y:auto; flex:1; }
+  .wk-header{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:6px; }
+  .wk-header div{ text-align:center; font-size:10px; color:var(--sub); text-transform:uppercase; }
+  .grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
+  .grid.anim-next{ animation:slideInRight 0.32s cubic-bezier(0.22,1,0.36,1) both; }
+  .grid.anim-prev{ animation:slideInLeft 0.32s cubic-bezier(0.22,1,0.36,1) both; }
+  @keyframes slideInRight{ from{ transform:translateX(18px); opacity:0; } to{ transform:translateX(0); opacity:1; } }
+  @keyframes slideInLeft{ from{ transform:translateX(-18px); opacity:0; } to{ transform:translateX(0); opacity:1; } }
+  .cell{ aspect-ratio:1; border-radius:12px; background:var(--panel); border:1px solid var(--line); display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; cursor:pointer; gap:2px; transition:transform 0.15s cubic-bezier(0.22,1,0.36,1), background 0.15s ease; }
+  .cell:active{ transform:scale(0.92); background:var(--panel-2); }
+  .cell.blank{ background:transparent; border:none; }
+  .cell .dnum{ font-size:14px; font-weight:600; width:24px; height:24px; display:flex; align-items:center; justify-content:center; border-radius:50%; transition:background 0.2s ease, color 0.2s ease; }
+  .cell.today .dnum{ background:var(--accent); color:var(--accent-ink); }
+  .cell .dots{ display:flex; gap:2px; height:5px; }
+  .cell .dot{ width:4px; height:4px; border-radius:50%; }
+
+  .view-fade-in{ animation:viewFadeIn 0.28s cubic-bezier(0.22,1,0.36,1) both; }
+  @keyframes viewFadeIn{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:translateY(0); } }
+
+  /* ---------- Day view / timeline ---------- */
+  #dayView{ display:flex; flex-direction:column; flex:1; overflow:hidden; }
+  main.timeline-scroll{ flex:1; overflow-y:auto; padding:8px 16px calc(40px + env(safe-area-inset-bottom)) 16px; }
+  .hour-row{ display:flex; border-top:1px solid var(--line); min-height:56px; }
+  .hour-row:first-child{ border-top:none; }
+  .hour-label{ width:52px; flex-shrink:0; font-size:11px; color:var(--sub); padding-top:8px; }
+  .slots{ flex:1; display:flex; flex-direction:column; }
+  .slot{ min-height:28px; display:flex; align-items:center; border-radius:10px; padding:2px 4px; margin:1px 0; cursor:pointer; }
+  .slot.empty{ touch-action:manipulation; -webkit-user-select:none; user-select:none; transition:background 0.15s ease, transform 0.12s ease; }
+  .slot.empty:active{ background:var(--panel-2); }
+  .slot.empty::after{ content:'+'; color:#333c72; font-size:13px; padding-left:4px; }
+  .slot.empty.pressing{ background:rgba(242,184,75,0.14); transform:scale(0.98); }
+  .slot.empty.selected{ background:rgba(242,184,75,0.18); border:1.5px dashed var(--accent); }
+  .slot.empty.selected::after{ content:'\2713'; color:var(--accent); font-weight:700; }
+  .task-block{ width:100%; border-radius:11px; padding:8px 12px; display:flex; flex-direction:column; gap:2px; background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--cat-color,var(--accent));
+    transition:transform 0.15s cubic-bezier(0.22,1,0.36,1), background 0.15s ease;
+    animation:taskIn 0.36s cubic-bezier(0.22,1,0.36,1) both; }
+  .task-block:active{ transform:scale(0.97); background:var(--panel-2); }
+  @keyframes taskIn{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:translateY(0); } }
+  .task-block .t-title{ font-size:13px; font-weight:600; color:var(--text); line-height:1.25; }
+  .task-block .t-meta{ font-size:10px; color:var(--sub); display:flex; align-items:center; gap:5px; }
+  .task-block .t-meta .cat-dot{ width:6px; height:6px; border-radius:50%; background:var(--cat-color,var(--accent)); flex-shrink:0; }
+
+  /* ---------- Multi-select action bar ---------- */
+  .multi-bar{ position:absolute; left:16px; right:16px; bottom:calc(20px + env(safe-area-inset-bottom)); background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px 14px 12px 18px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 10px 30px rgba(0,0,0,0.5); z-index:25; transform:translateY(140%); transition:transform 0.3s cubic-bezier(0.22,1,0.36,1); }
+  .multi-bar.open{ transform:translateY(0); }
+  .multi-bar #multiCount{ font-size:12px; color:var(--text); font-weight:600; }
+  .multi-actions{ display:flex; gap:8px; }
+  .btn-ghost{ background:none; border:1px solid var(--line); color:var(--sub); font-family:inherit; font-size:12px; font-weight:600; padding:9px 14px; border-radius:10px; cursor:pointer; }
+  .btn-apply-small{ background:var(--accent); color:var(--accent-ink); border:none; font-family:inherit; font-size:12px; font-weight:700; padding:9px 16px; border-radius:10px; cursor:pointer; }
+</style>
+</head>
+<body>
+<div id="shell">
+
+<div id="gateMount"></div>
+
+<div id="app" style="display:none;" class="page-fade-in">
+  <div class="hero" id="hero">
+    <div class="stars"></div>
+    <svg viewBox="0 0 400 90" preserveAspectRatio="none"><polygon points="0,90 0,55 40,20 80,50 130,10 180,45 230,25 280,55 320,30 360,50 400,35 400,90" fill="#141c48"/><polygon points="0,90 0,70 60,40 110,60 160,35 220,58 270,42 330,60 380,45 400,55 400,90" fill="#0f1638"/></svg>
+    <div class="window" style="left:57%; bottom:38px;"></div>
+    <div class="hero-fade"></div>
+    <div class="hero-content">
+      <div class="title-row">
+        <button class="icon-btn" id="menuBtn" aria-label="Menu">&#9776;</button>
+        <h1>Planner</h1>
+        <button class="sync-chip" id="syncChip" aria-label="Sync now">
+          <span class="sync-pip" id="syncDot"></span><span id="syncText">Synced</span><span class="sync-icon">&#8635;</span>
+        </button>
+      </div>
+      <div class="seg-control view-toggle" id="viewToggle">
+        <button class="seg-btn selected" data-mode="day">Daily</button>
+        <button class="seg-btn" data-mode="month">Monthly</button>
+      </div>
+      <div class="quick-row" id="quickRow">
+        <a class="quick-tile" href="food.html"><span class="qt-icon">&#127860;</span>Food</a>
+        <a class="quick-tile" href="expenses.html"><span class="qt-icon">&#128176;</span>Expenses</a>
+      </div>
+      <div class="nav-row" id="monthNav" style="display:none;">
+        <button id="prevMonth">&larr;</button>
+        <div class="mlabel" id="monthLabel"></div>
+        <button id="nextMonth">&rarr;</button>
+      </div>
+      <div class="nav-row" id="dayNav">
+        <button id="prevDay">&larr;</button>
+        <div class="date-banner" id="dateBanner"></div>
+        <button id="nextDay">&rarr;</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="monthView" style="display:none;">
+    <div class="wk-header"><div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div></div>
+    <div class="grid" id="monthGrid"></div>
+  </div>
+
+  <div id="dayView" style="display:flex;">
+    <main class="timeline-scroll"><div id="timeline"></div></main>
+  </div>
+
+  <div class="multi-bar" id="multiBar">
+    <span id="multiCount">0 selected</span>
+    <div class="multi-actions">
+      <button class="btn-ghost" id="multiCancelBtn">Cancel</button>
+      <button class="btn-apply-small" id="multiApplyBtn">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- Task editor sheet (also used for bulk multi-slot create) -->
+<div class="sheet-backdrop" id="backdrop"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <button class="sheet-close" id="sheetCloseBtn" aria-label="Close without saving">&times;</button>
+  <p class="sheet-sub" id="sheetSubText" style="display:none;"></p>
+  <label style="margin-top:4px;">Category <span style="text-transform:none; opacity:0.6;">(required)</span></label>
+  <div class="cat-row" id="catRow"></div>
+  <label>Task <span style="text-transform:none; opacity:0.6;">(optional)</span></label>
+  <input type="text" id="taskTitle" placeholder="What are you doing? (leave blank to just use the category)" maxlength="60">
+  <div id="timeFieldWrap">
+    <label>Time</label>
+    <div class="time-range">
+      <select id="startTime"></select><span style="color:var(--sub)">&rarr;</span><select id="endTime"></select>
+    </div>
+  </div>
+  <label>Notes</label>
+  <textarea id="taskNotes" placeholder="Optional"></textarea>
+  <div class="sheet-error" id="sheetError"></div>
+  <div class="sheet-actions">
+    <button class="btn btn-delete" id="deleteBtn" style="display:none;">Delete</button>
+    <button class="btn btn-save" id="saveBtn">Save</button>
+  </div>
+</div>
+
+<div id="drawerMount"></div>
+
+</div><!-- /#shell -->
+
+<script src="config.js"></script>
+<script src="auth.js"></script>
+<script src="sheetsApi.js"></script>
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

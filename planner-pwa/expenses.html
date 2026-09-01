@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0f24">
+<title>Planner — Expenses</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script>
+  try { if (localStorage.getItem('planner_theme') === 'light') document.documentElement.setAttribute('data-theme', 'light'); } catch (e) {}
+</script>
+<link rel="stylesheet" href="styles.css">
+<style>
+  #expPage{ display:flex; flex-direction:column; height:100%; overflow-y:auto; }
+  .exp-body{ padding:4px 16px calc(32px + env(safe-area-inset-bottom)) 16px; }
+
+  .exp-nav{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:10px; }
+  .exp-nav button{ background:var(--panel-2); border:1px solid var(--line); color:var(--text); width:34px; height:34px; border-radius:9px; font-size:15px; flex-shrink:0; }
+  .exp-date-banner{ display:flex; align-items:baseline; gap:8px; justify-content:center; flex:1; }
+  .exp-date-banner .big-num{ font-size:20px; font-weight:700; line-height:1; }
+  .exp-date-banner .dcol{ display:flex; flex-direction:column; line-height:1.2; text-align:left; }
+  .exp-date-banner .dow{ font-family:Georgia,serif; font-style:italic; font-size:13px; color:var(--text); }
+  .exp-date-banner .ym{ font-size:9px; color:var(--sub); text-transform:uppercase; letter-spacing:0.5px; }
+  .exp-mlabel{ font-size:16px; font-weight:600; flex:1; text-align:center; }
+
+  .day-total-card{ background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:18px; margin-top:14px; text-align:center; }
+  .dt-label{ font-size:11px; color:var(--sub); text-transform:uppercase; letter-spacing:0.5px; }
+  .dt-amount{ font-size:30px; font-weight:700; margin-top:6px; }
+
+  .exp-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-top:8px; cursor:pointer; }
+  .exp-row:active{ transform:scale(0.98); }
+  .exp-row-main{ display:flex; align-items:center; gap:10px; min-width:0; }
+  .exp-amt{ font-size:14px; font-weight:700; color:var(--accent); flex-shrink:0; }
+  .exp-reason{ font-size:13px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  .fab-add{ width:100%; margin-top:16px; background:var(--accent); color:var(--accent-ink); border:none; border-radius:12px; padding:13px; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+
+  .exp-month-total{ text-align:center; font-size:12px; color:var(--sub); margin:10px 0 4px 0; }
+  .exp-wk-header{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin:14px 0 6px 0; }
+  .exp-wk-header div{ text-align:center; font-size:10px; color:var(--sub); text-transform:uppercase; }
+  .exp-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
+  .exp-grid.anim-next{ animation:slideInRight 0.32s cubic-bezier(0.22,1,0.36,1) both; }
+  .exp-grid.anim-prev{ animation:slideInLeft 0.32s cubic-bezier(0.22,1,0.36,1) both; }
+  @keyframes slideInRight{ from{ transform:translateX(18px); opacity:0; } to{ transform:translateX(0); opacity:1; } }
+  @keyframes slideInLeft{ from{ transform:translateX(-18px); opacity:0; } to{ transform:translateX(0); opacity:1; } }
+  .exp-cell{ aspect-ratio:1; border-radius:12px; background:var(--panel); border:1px solid var(--line); display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; cursor:pointer; gap:2px; transition:transform 0.15s cubic-bezier(0.22,1,0.36,1), background 0.15s ease; }
+  .exp-cell:active{ transform:scale(0.92); background:var(--panel-2); }
+  .exp-cell.blank{ background:transparent; border:none; cursor:default; }
+  .exp-cell .dnum{ font-size:13px; font-weight:600; width:22px; height:22px; display:flex; align-items:center; justify-content:center; border-radius:50%; }
+  .exp-cell.today .dnum{ background:var(--accent); color:var(--accent-ink); }
+  .exp-cell .exp-price{ font-size:9px; color:var(--sub); font-weight:600; height:11px; }
+  .exp-cell.has-spend .exp-price{ color:var(--accent); }
+
+  .exp-error{ display:none; color:var(--error); font-size:12px; margin-top:14px; background:rgba(239,124,142,0.1); border:1px solid var(--error); border-radius:10px; padding:10px 12px; }
+  .exp-error.show{ display:block; }
+</style>
+</head>
+<body>
+<div id="shell">
+
+<div id="gateMount"></div>
+
+<div id="expPage" style="display:none;" class="page-fade-in">
+  <div class="page-header">
+    <a class="icon-btn" href="index.html" aria-label="Back">&larr;</a>
+    <h1>Expenses</h1>
+    <button class="sync-chip" id="syncChip" aria-label="Sync now">
+      <span class="sync-pip" id="syncDot"></span><span id="syncText">Synced</span><span class="sync-icon">&#8635;</span>
+    </button>
+    <button class="icon-btn" id="menuBtn" aria-label="Menu">&#9776;</button>
+  </div>
+
+  <div class="exp-body">
+    <div class="seg-control" id="expViewToggle">
+      <button class="seg-btn selected" data-mode="day">Daily</button>
+      <button class="seg-btn" data-mode="month">Monthly</button>
+    </div>
+
+    <div class="exp-nav" id="expMonthNav" style="display:none;">
+      <button id="expPrevMonth" aria-label="Previous month">&larr;</button>
+      <div class="exp-mlabel" id="expMonthLabel"></div>
+      <button id="expNextMonth" aria-label="Next month">&rarr;</button>
+    </div>
+    <div class="exp-nav" id="expDayNav">
+      <button id="expPrevDay" aria-label="Previous day">&larr;</button>
+      <div class="exp-date-banner" id="expDateBanner"></div>
+      <button id="expNextDay" aria-label="Next day">&rarr;</button>
+    </div>
+
+    <div id="expDayView">
+      <div class="day-total-card">
+        <div class="dt-label">Total spent this day</div>
+        <div class="dt-amount" id="expDayTotal">&#8377;0</div>
+      </div>
+      <div id="expList"></div>
+      <button class="fab-add" id="addExpenseBtn">+ Add expense</button>
+    </div>
+
+    <div id="expMonthView" style="display:none;">
+      <div class="exp-month-total" id="expMonthTotal"></div>
+      <div class="exp-wk-header"><div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div></div>
+      <div class="exp-grid" id="expMonthGrid"></div>
+    </div>
+
+    <div class="exp-error" id="expError"></div>
+  </div>
+</div>
+
+<!-- Expense add/edit sheet -->
+<div class="sheet-backdrop" id="expBackdrop"></div>
+<div class="sheet" id="expSheet">
+  <div class="sheet-handle"></div>
+  <button class="sheet-close" id="expCloseBtn" aria-label="Close">&times;</button>
+  <label>Amount (INR)</label>
+  <input type="number" id="expAmount" inputmode="decimal" placeholder="0" min="0" step="0.01">
+  <label>Reason</label>
+  <input type="text" id="expReason" placeholder="What was it for?" maxlength="80">
+  <div class="sheet-error" id="expSheetError"></div>
+  <div class="sheet-actions">
+    <button class="btn btn-delete" id="expDeleteBtn" style="display:none;">Delete</button>
+    <button class="btn btn-save" id="expSaveBtn">Save</button>
+  </div>
+</div>
+
+<div id="drawerMount"></div>
+
+</div><!-- /#shell -->
+
+<script src="config.js"></script>
+<script src="auth.js"></script>
+<script src="sheetsApi.js"></script>
+<script src="core.js"></script>
+<script src="expenses.js"></script>
+</body>
+</html>
