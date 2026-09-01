@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0f24">
+<title>Planner — Food</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script>
+  try { if (localStorage.getItem('planner_theme') === 'light') document.documentElement.setAttribute('data-theme', 'light'); } catch (e) {}
+</script>
+<link rel="stylesheet" href="styles.css">
+<style>
+  #foodPage{ display:flex; flex-direction:column; height:100%; overflow-y:auto; }
+  .food-body{ padding:4px 16px calc(32px + env(safe-area-inset-bottom)) 16px; }
+
+  .food-nav{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:6px; }
+  .food-nav button{ background:var(--panel-2); border:1px solid var(--line); color:var(--text); width:34px; height:34px; border-radius:9px; font-size:15px; flex-shrink:0; }
+  .food-date-banner{ display:flex; align-items:baseline; gap:8px; justify-content:center; flex:1; }
+  .food-date-banner .big-num{ font-size:20px; font-weight:700; line-height:1; }
+  .food-date-banner .dcol{ display:flex; flex-direction:column; line-height:1.2; text-align:left; }
+  .food-date-banner .dow{ font-family:Georgia,serif; font-style:italic; font-size:13px; color:var(--text); }
+  .food-date-banner .ym{ font-size:9px; color:var(--sub); text-transform:uppercase; letter-spacing:0.5px; }
+
+  .progress-pill{ text-align:center; font-size:11px; color:var(--sub); background:var(--panel); border:1px solid var(--line); border-radius:20px; padding:8px 14px; margin:14px 0 4px 0; }
+
+  .meal-list{ display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+  .meal-card{ display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px 14px; }
+  .meal-info{ display:flex; align-items:center; gap:9px; }
+  .meal-icon{ font-size:18px; }
+  .meal-label{ font-size:13.5px; font-weight:600; }
+  .meal-actions{ display:flex; gap:6px; }
+  .meal-btn{ font-family:inherit; font-size:11px; font-weight:600; padding:8px 12px; border-radius:9px; border:1.5px solid var(--line); background:transparent; color:var(--sub); cursor:pointer; }
+  .meal-btn.eaten.selected{ background:var(--sleep); border-color:var(--sleep); color:#08211f; }
+  .meal-btn.skipped.selected{ background:var(--wasted); border-color:var(--wasted); color:#2a0a10; }
+
+  .extra-section{ margin-top:24px; }
+  .extra-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .extra-head span{ font-size:11px; color:var(--sub); text-transform:uppercase; letter-spacing:0.5px; }
+  .btn-ghost-sm{ background:none; border:1px solid var(--line); color:var(--accent); font-family:inherit; font-size:11px; font-weight:600; padding:7px 12px; border-radius:9px; cursor:pointer; }
+  .extra-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:11px 12px; margin-bottom:7px; }
+  .extra-note{ font-size:13px; flex:1; }
+  .extra-del{ background:none; border:none; color:var(--sub); font-size:18px; line-height:1; cursor:pointer; flex-shrink:0; }
+
+  .food-error{ display:none; color:var(--error); font-size:12px; margin-top:14px; background:rgba(239,124,142,0.1); border:1px solid var(--error); border-radius:10px; padding:10px 12px; }
+  .food-error.show{ display:block; }
+</style>
+</head>
+<body>
+<div id="shell">
+
+<div id="gateMount"></div>
+
+<div id="foodPage" style="display:none;" class="page-fade-in">
+  <div class="page-header">
+    <a class="icon-btn" href="index.html" aria-label="Back">&larr;</a>
+    <h1>Food</h1>
+    <button class="sync-chip" id="syncChip" aria-label="Sync now">
+      <span class="sync-pip" id="syncDot"></span><span id="syncText">Synced</span><span class="sync-icon">&#8635;</span>
+    </button>
+    <button class="icon-btn" id="menuBtn" aria-label="Menu">&#9776;</button>
+  </div>
+
+  <div class="food-body">
+    <div class="food-nav">
+      <button id="foodPrevDay" aria-label="Previous day">&larr;</button>
+      <div class="food-date-banner" id="foodDateBanner"></div>
+      <button id="foodNextDay" aria-label="Next day">&rarr;</button>
+    </div>
+
+    <div class="progress-pill" id="mealProgress">0/4 meals logged</div>
+
+    <div class="meal-list" id="mealList"></div>
+
+    <div class="extra-section">
+      <div class="extra-head">
+        <span>Outside / extra food</span>
+        <button class="btn-ghost-sm" id="addExtraBtn">+ Add</button>
+      </div>
+      <div id="extraList"></div>
+    </div>
+
+    <div class="food-error" id="foodError"></div>
+  </div>
+</div>
+
+<!-- Extra food entry sheet -->
+<div class="sheet-backdrop" id="extraBackdrop"></div>
+<div class="sheet" id="extraSheet">
+  <div class="sheet-handle"></div>
+  <button class="sheet-close" id="extraCloseBtn" aria-label="Close">&times;</button>
+  <label>What did you eat?</label>
+  <input type="text" id="extraNote" placeholder="e.g. Pizza with friends" maxlength="80">
+  <div class="sheet-error" id="extraError"></div>
+  <div class="sheet-actions">
+    <button class="btn btn-save" id="extraSaveBtn">Add</button>
+  </div>
+</div>
+
+<div id="drawerMount"></div>
+
+</div><!-- /#shell -->
+
+<script src="config.js"></script>
+<script src="auth.js"></script>
+<script src="sheetsApi.js"></script>
+<script src="core.js"></script>
+<script src="food.js"></script>
+</body>
+</html>

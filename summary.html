@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0f24">
+<title>Planner — Summary</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script>
+  try { if (localStorage.getItem('planner_theme') === 'light') document.documentElement.setAttribute('data-theme', 'light'); } catch (e) {}
+</script>
+<link rel="stylesheet" href="styles.css">
+<style>
+  #summaryPage{ display:flex; flex-direction:column; height:100%; overflow-y:auto; }
+  .summary-body{ padding:4px 16px calc(32px + env(safe-area-inset-bottom)) 16px; }
+
+  .period-card{ background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px; margin-top:14px; }
+  .period-text{ font-size:12px; color:var(--sub); text-align:center; margin:10px 0 0 0; }
+
+  .donut-wrap{ position:relative; width:212px; height:212px; margin:22px auto 4px auto; }
+  .donut-wrap svg{ transform:rotate(-90deg); width:100%; height:100%; filter:drop-shadow(0 6px 18px rgba(0,0,0,0.25)); }
+  .donut-seg{ cursor:pointer; transition:opacity 0.2s ease, stroke-width 0.2s ease; }
+  .donut-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; text-align:center; padding:0 24px; }
+  .donut-center-val{ font-size:24px; font-weight:700; line-height:1.1; }
+  .donut-center-label{ font-size:10.5px; color:var(--sub); margin-top:4px; line-height:1.35; }
+
+  .summary-legend{ display:flex; flex-direction:column; gap:3px; margin-top:22px; }
+  .legend-row{ display:flex; align-items:center; gap:12px; padding:11px 10px; border-radius:11px; cursor:pointer; transition:background 0.15s ease, transform 0.15s cubic-bezier(0.22,1,0.36,1); background:var(--panel); border:1px solid var(--line); margin-bottom:6px; }
+  .legend-row:active{ transform:scale(0.98); }
+  .legend-row.selected{ border-color:var(--accent); }
+  .legend-row .dot{ width:11px; height:11px; border-radius:50%; flex-shrink:0; }
+  .legend-row .lbl{ flex:1; font-size:13.5px; font-weight:600; }
+  .legend-row .bar-track{ position:absolute; }
+  .legend-row .val{ font-size:11px; color:var(--sub); text-align:right; white-space:nowrap; }
+</style>
+</head>
+<body>
+<div id="shell">
+
+<div id="gateMount"></div>
+
+<div id="summaryPage" style="display:none;" class="page-fade-in">
+  <div class="page-header">
+    <a class="icon-btn" href="index.html" aria-label="Back">&larr;</a>
+    <h1>Where's my day going?</h1>
+    <button class="sync-chip" id="syncChip" aria-label="Sync now">
+      <span class="sync-pip" id="syncDot"></span><span id="syncText">Synced</span><span class="sync-icon">&#8635;</span>
+    </button>
+    <button class="icon-btn" id="menuBtn" aria-label="Menu">&#9776;</button>
+  </div>
+
+  <div class="summary-body">
+    <div class="seg-control" id="summaryModeSeg">
+      <button class="seg-btn selected" data-mode="day">Single day</button>
+      <button class="seg-btn" data-mode="range">Date range</button>
+    </div>
+
+    <div class="period-card">
+      <div id="summaryDayFields">
+        <label>Date</label>
+        <input type="date" id="summaryDate">
+      </div>
+      <div id="summaryRangeFields" style="display:none;">
+        <label>From</label>
+        <input type="date" id="summaryFrom">
+        <label>To</label>
+        <input type="date" id="summaryTo">
+      </div>
+      <p class="period-text" id="summaryPeriodText"></p>
+    </div>
+
+    <div class="donut-wrap">
+      <svg id="donutSvg" viewBox="0 0 212 212"></svg>
+      <div class="donut-center">
+        <div class="donut-center-val" id="donutCenterVal">--</div>
+        <div class="donut-center-label" id="donutCenterLabel">Tap a slice</div>
+      </div>
+    </div>
+
+    <div class="summary-legend" id="summaryLegend"></div>
+  </div>
+</div>
+
+<div id="drawerMount"></div>
+
+</div><!-- /#shell -->
+
+<script src="config.js"></script>
+<script src="auth.js"></script>
+<script src="sheetsApi.js"></script>
+<script src="core.js"></script>
+<script src="summary.js"></script>
+</body>
+</html>

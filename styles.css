@@ -1,0 +1,137 @@
+/* Shared design tokens + components used by every page (index, summary, profile, export). */
+:root{
+  --ink:#0a0f24; --ink-2:#0d1330; --panel:#141a3d; --panel-2:#1a214a; --line:#293168;
+  --text:#eef1fb; --sub:#8d97c2; --accent:#f2b84b; --accent-ink:#22160a; --error:#ef7c8e;
+  --class:#6ea8fe; --labs:#b892ff; --null:#7c8299; --sleep:#5fd0c9; --wasted:#ef7c8e; --work:#f2b84b;
+  color-scheme: dark;
+}
+:root[data-theme="light"]{
+  --ink:#f3f5fb; --ink-2:#e7ebf6; --panel:#ffffff; --panel-2:#eef1fa; --line:#dbe1f0;
+  --text:#181c2e; --sub:#5a6180; --accent:#e8a33d; --accent-ink:#22160a; --error:#c73752;
+  --class:#2f6fe0; --labs:#8250df; --null:#6b7280; --sleep:#0d9488; --wasted:#c73752; --work:#c98a1f;
+  color-scheme: light;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{height:100%; margin:0;}
+body{background:var(--ink-2); color:var(--text); font-family:'SF Mono','Roboto Mono',ui-monospace,monospace; overscroll-behavior-y:none;}
+
+/* Cross-document view transitions: a free cross-fade between pages on browsers
+   that support it (Chrome/Edge). No-op elsewhere — plain instant navigation. */
+@view-transition { navigation: auto; }
+
+/* ---------- Shell: fills the viewport on phones, becomes a centered frame on wider screens ---------- */
+/* height:100vh first as a fallback for WebViews without dvh support, then the
+   more accurate dvh overrides it where available. */
+#shell{ position:relative; width:100%; max-width:480px; height:100vh; height:100dvh; margin:0 auto; overflow:hidden; background:var(--ink); }
+
+/* Safe-area insets (notch/status bar/gesture-nav) — applied to actual content,
+   not to #shell itself: full-bleed backgrounds (hero, drawer, gate) are meant
+   to extend edge-to-edge, only the readable/tappable content needs inset.
+   viewport-fit=cover in each page's <head> is what makes these env() vars
+   resolve to real values instead of 0. */
+.page-header{ padding-top:calc(16px + env(safe-area-inset-top)); }
+.drawer-nav{ padding-bottom:env(safe-area-inset-bottom); }
+.gate{ padding-top:calc(24px + env(safe-area-inset-top)); padding-bottom:calc(24px + env(safe-area-inset-bottom)); }
+@media (min-width:640px){
+  html,body{ height:100%; }
+  body{ display:flex; align-items:center; justify-content:center; background:radial-gradient(ellipse at top, #131b45 0%, #05070f 72%); padding:24px; }
+  :root[data-theme="light"] body{ background:radial-gradient(ellipse at top, #eef1fb 0%, #c9d0e4 72%); }
+  #shell{ height:min(880px, 92vh); border-radius:30px; box-shadow:0 30px 90px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.07); }
+}
+
+/* ---------- Sign-in gate ---------- */
+.gate{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; background:var(--ink); z-index:50; padding:24px; text-align:center; }
+.gate h1{ font-family:Georgia,serif; font-weight:400; font-style:italic; font-size:28px; margin:0 0 4px 0; }
+.gate p{ color:var(--sub); font-size:12px; max-width:280px; line-height:1.5; margin:0; }
+.btn-google{ display:flex; align-items:center; gap:10px; background:#fff; color:#1c1305; border:none; border-radius:12px; padding:13px 22px; font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; }
+.btn-google svg{ width:18px; height:18px; }
+.gate-error{ color:var(--error); font-size:11px; max-width:280px; }
+.spinner{ width:28px; height:28px; border-radius:50%; border:3px solid var(--line); border-top-color:var(--accent); animation:spin 0.8s linear infinite; }
+@keyframes spin{ to{ transform:rotate(360deg); } }
+
+button{ transition:transform 0.15s cubic-bezier(0.22,1,0.36,1), background 0.15s ease, opacity 0.15s ease; font-family:inherit; }
+button:active{ transform:scale(0.92); }
+a{ text-decoration:none; color:inherit; }
+
+.icon-btn{ background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:var(--text); width:34px; height:34px; border-radius:9px; font-size:15px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.sync-chip{ display:flex; align-items:center; gap:5px; background:none; border:none; padding:5px 7px; border-radius:7px; flex-shrink:0; }
+.sync-chip:active{ background:rgba(255,255,255,0.08); }
+.sync-chip #syncText{ font-size:9px; color:var(--sub); text-transform:uppercase; letter-spacing:0.4px; }
+.sync-chip .sync-icon{ font-size:11px; color:var(--sub); display:inline-block; }
+.sync-chip.busy .sync-icon{ animation:spin 0.8s linear infinite; }
+.sync-pip{ width:7px; height:7px; border-radius:50%; background:#7fd88f; flex-shrink:0; transition:background 0.25s ease; }
+.sync-pip.busy{ background:var(--accent); animation:pulse 1s ease-in-out infinite; }
+.sync-pip.pending{ background:var(--accent); }
+.sync-pip.err{ background:var(--error); }
+.sync-pip.offline{ background:var(--sub); }
+@keyframes pulse{ 0%,100%{ opacity:1; transform:scale(1); } 50%{ opacity:0.5; transform:scale(1.3); } }
+
+/* ---------- Simple page header (Summary / Profile / Export) ---------- */
+.page-header{ display:flex; align-items:center; gap:8px; padding:16px 16px 12px 16px; flex-shrink:0; }
+.page-header h1{ font-family:Georgia,serif; font-weight:400; font-style:italic; font-size:19px; margin:0; flex:1; }
+
+.page-fade-in{ animation:pageFadeIn 0.32s cubic-bezier(0.22,1,0.36,1) both; }
+@keyframes pageFadeIn{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:translateY(0); } }
+
+/* ---------- Segmented control (Daily/Monthly, Theme, export & summary modes) ---------- */
+.seg-control{ display:flex; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:3px; }
+.seg-control.spaced{ margin-top:12px; }
+.seg-btn{ flex:1; background:none; border:none; color:var(--sub); font-family:inherit; font-size:12px; font-weight:600; padding:9px 4px; border-radius:8px; cursor:pointer; transition:transform 0.15s cubic-bezier(0.22,1,0.36,1), background 0.2s ease, color 0.2s ease; }
+.seg-btn.selected{ background:var(--accent); color:var(--accent-ink); }
+
+/* ---------- Bottom sheet (task editor on index.html) + shared form/button styles ---------- */
+.sheet-backdrop{ position:absolute; inset:0; background:rgba(4,6,20,0.6); z-index:30; opacity:0; pointer-events:none; transition:opacity 0.28s cubic-bezier(0.22,1,0.36,1); }
+.sheet-backdrop.open{ opacity:1; pointer-events:auto; }
+.sheet{ position:absolute; left:0; right:0; bottom:0; background:var(--panel); border-radius:20px 20px 0 0; padding:10px 20px 28px 20px; z-index:31; transform:translateY(100%); transition:transform 0.34s cubic-bezier(0.32,0.72,0,1); max-height:85vh; overflow-y:auto; }
+.sheet.open{ transform:translateY(0); }
+.sheet-handle{ width:36px; height:4px; background:var(--line); border-radius:2px; margin:0 auto 16px auto; }
+.sheet-close{ position:absolute; top:10px; right:12px; width:30px; height:30px; border-radius:50%; background:var(--panel-2); border:1px solid var(--line); color:var(--sub); font-size:18px; line-height:1; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.sheet-title{ font-family:Georgia,serif; font-style:italic; font-weight:400; font-size:18px; margin:0 0 4px 0; }
+.sheet-sub{ color:var(--sub); font-size:11px; margin:0 0 4px 0; }
+label{ display:block; font-size:11px; color:var(--sub); text-transform:uppercase; letter-spacing:0.5px; margin:14px 0 6px 0; }
+input[type=text], input[type=date], input[type=month], input[type=number], textarea{ width:100%; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:11px 12px; color:var(--text); font-family:inherit; font-size:15px; }
+textarea{ resize:none; min-height:60px; }
+.time-range{ display:flex; align-items:center; gap:10px; }
+.time-range select{ background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:10px; font-family:inherit; font-size:14px; flex:1; }
+.cat-row{ display:flex; gap:8px; flex-wrap:wrap; }
+.cat-pill{ padding:8px 14px; border-radius:20px; font-size:12px; border:1.5px solid var(--line); background:transparent; color:var(--text); cursor:pointer; transition:transform 0.15s cubic-bezier(0.22,1,0.36,1), background 0.2s ease, border-color 0.2s ease, color 0.2s ease; }
+.cat-pill.selected{ border-color:transparent; color:#12141c; font-weight:600; }
+.sheet-actions{ display:flex; gap:10px; margin-top:22px; }
+.btn{ flex:1; padding:13px; border-radius:12px; border:none; font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; }
+.btn:disabled{ opacity:0.6; }
+.btn-save{ background:var(--accent); color:var(--accent-ink); }
+.btn-delete{ background:transparent; color:var(--wasted); border:1.5px solid var(--wasted); }
+.sheet-error{ display:none; color:var(--error); font-size:12px; margin-top:14px; background:rgba(239,124,142,0.1); border:1px solid var(--error); border-radius:10px; padding:10px 12px; }
+.sheet-error.show{ display:block; }
+.empty-state{ text-align:center; color:var(--sub); font-size:12px; padding:40px 0 10px 0; }
+
+/* ---------- Drawer (injected on every page by core.js) ---------- */
+.drawer-backdrop{ position:absolute; inset:0; background:rgba(4,6,20,0.6); z-index:40; opacity:0; pointer-events:none; transition:opacity 0.3s cubic-bezier(0.22,1,0.36,1); }
+.drawer-backdrop.open{ opacity:1; pointer-events:auto; }
+.drawer{ position:absolute; top:0; bottom:0; left:0; width:82%; max-width:300px; background:var(--ink-2); z-index:41; transform:translateX(-100%); transition:transform 0.34s cubic-bezier(0.22,1,0.36,1); display:flex; flex-direction:column; overflow-y:auto; box-shadow:12px 0 40px rgba(0,0,0,0.4); }
+.drawer.open{ transform:translateX(0); }
+.drawer-item{ animation:drawerItemIn 0.4s cubic-bezier(0.22,1,0.36,1) both; }
+@keyframes drawerItemIn{ from{ opacity:0; transform:translateX(-10px); } to{ opacity:1; transform:translateX(0); } }
+.drawer-hero{ position:relative; height:130px; flex-shrink:0; overflow:hidden; background:linear-gradient(180deg,#0c1240 0%,#0d1330 100%); display:flex; align-items:flex-end; padding:16px; --text:#eef1fb; color:var(--text); }
+.drawer-hero svg{ position:absolute; bottom:0; left:0; width:100%; height:auto; }
+.drawer-brand{ position:relative; z-index:2; display:flex; align-items:center; gap:8px; }
+.drawer-mark{ width:26px; height:26px; border-radius:7px; background:var(--accent); color:var(--accent-ink); display:flex; align-items:center; justify-content:center; font-family:Georgia,serif; font-style:italic; font-weight:700; font-size:15px; }
+.drawer-word{ font-family:Georgia,serif; font-style:italic; font-size:19px; }
+.drawer-nav{ padding:10px 8px; display:flex; flex-direction:column; flex:1; }
+.drawer-item{ display:flex; align-items:center; gap:12px; background:none; border:none; color:var(--text); font-family:inherit; font-size:13px; text-align:left; padding:13px 12px; border-radius:10px; cursor:pointer; width:100%; }
+.drawer-item:active{ background:var(--panel); }
+.drawer-item.active{ background:var(--panel-2); color:var(--accent); }
+.drawer-item .di-icon{ width:18px; text-align:center; color:var(--sub); flex-shrink:0; }
+.drawer-theme-row{ cursor:default; }
+.drawer-theme-row:active{ background:none; }
+.drawer-theme-label{ flex:1; }
+.drawer-theme-row .seg-control{ width:120px; padding:2px; }
+.drawer-theme-row .seg-btn{ font-size:11px; padding:6px 4px; }
+.drawer-hint{ font-size:11px; color:var(--sub); line-height:1.5; padding:0 12px 10px 42px; margin:-4px 0 0 0; }
+.drawer-spacer{ flex:1; }
+.drawer-danger{ color:var(--error); }
+.drawer-foot{ padding:12px; font-size:10px; color:var(--sub); opacity:0.7; }
+
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{ animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; scroll-behavior:auto !important; }
+}

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0f24">
+<title>Planner — Export</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script>
+  try { if (localStorage.getItem('planner_theme') === 'light') document.documentElement.setAttribute('data-theme', 'light'); } catch (e) {}
+</script>
+<link rel="stylesheet" href="styles.css">
+<style>
+  #exportPage{ display:flex; flex-direction:column; height:100%; overflow-y:auto; }
+  .export-body{ padding:4px 16px calc(32px + env(safe-area-inset-bottom)) 16px; }
+  .export-card{ background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px; margin-top:14px; }
+</style>
+</head>
+<body>
+<div id="shell">
+
+<div id="gateMount"></div>
+
+<div id="exportPage" style="display:none;" class="page-fade-in">
+  <div class="page-header">
+    <a class="icon-btn" href="index.html" aria-label="Back">&larr;</a>
+    <h1>Export as PDF</h1>
+    <button class="sync-chip" id="syncChip" aria-label="Sync now">
+      <span class="sync-pip" id="syncDot"></span><span id="syncText">Synced</span><span class="sync-icon">&#8635;</span>
+    </button>
+    <button class="icon-btn" id="menuBtn" aria-label="Menu">&#9776;</button>
+  </div>
+
+  <div class="export-body">
+    <div class="seg-control" id="exportModeSeg">
+      <button class="seg-btn selected" data-mode="range">Custom range</button>
+      <button class="seg-btn" data-mode="month">Monthly batch</button>
+    </div>
+
+    <div class="export-card">
+      <p class="sheet-sub" id="exportSubText" style="margin-top:0;">Pick a date range to export.</p>
+
+      <div id="rangeFields">
+        <label>From</label>
+        <input type="date" id="exportFrom">
+        <label>To</label>
+        <input type="date" id="exportTo">
+      </div>
+
+      <div id="monthFields" style="display:none;">
+        <label>From month</label>
+        <input type="month" id="exportFromMonth">
+        <label>To month</label>
+        <input type="month" id="exportToMonth">
+      </div>
+    </div>
+
+    <div class="sheet-error" id="exportError"></div>
+    <div class="sheet-actions">
+      <button class="btn btn-save" id="exportGenerateBtn">Download PDF</button>
+    </div>
+  </div>
+</div>
+
+<div id="drawerMount"></div>
+
+</div><!-- /#shell -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="config.js"></script>
+<script src="auth.js"></script>
+<script src="sheetsApi.js"></script>
+<script src="core.js"></script>
+<script src="export.js"></script>
+</body>
+</html>
